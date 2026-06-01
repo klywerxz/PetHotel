@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - PetHotel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<script>
+    // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА при загрузке страницы входа
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log("✅ Данные очищены");
+</script>
+
+<div class="container">
+    <div class="header">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+            <span style="font-size: 48px;">🐾</span>
+            <h1 style="margin: 0;">PetHotel</h1>
+        </div>
+        <p>Система учёта клиентов гостиницы для животных</p>
+    </div>
+    <div class="form-container">
+        <h2>Вход в систему</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" id="username" placeholder="Логин" required>
+            </div>
+            <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" id="password" placeholder="Пароль" required>
+            </div>
+            <button type="submit" class="btn-primary">Войти</button>
+        </form>
+        <div id="message" class="error-message" style="display: none;"></div>
+        <div class="test-accounts">
+            <p><strong>📋 Тестовые учётные записи:</strong></p>
+            <p>🔑 admin / admin123 → Администратор</p>
+            <p>🔑 manager / manager123 → Менеджер</p>
+            <p>🔑 client / client123 → Клиент</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/v1';
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const messageDiv = document.getElementById('message');
+        
+        messageDiv.style.display = 'none';
+        
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+        
+        try {
+            const response = await fetch(`${API_URL}/token`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('user_id', data.user_id);
+                
+                if (data.role === 'admin') window.location.href = 'admin.html';
+                else if (data.role === 'manager') window.location.href = 'manager.html';
+                else window.location.href = 'dashboard.html';
+            } else {
+                messageDiv.textContent = 'Неверный логин или пароль';
+                messageDiv.style.display = 'block';
+            }
+        } catch (error) {
+            messageDiv.textContent = 'Ошибка подключения к серверу';
+            messageDiv.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>

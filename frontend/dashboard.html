@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - PetHotel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+        .app { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
+        .sidebar .logo { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #34495e; }
+        .nav-menu { list-style: none; margin-top: 20px; flex: 1; }
+        .nav-menu li a { display: block; padding: 12px 20px; color: #ecf0f1; text-decoration: none; cursor: pointer; }
+        .nav-menu li a:hover, .nav-menu li.active a { background: #4CAF50; }
+        .user-menu { padding: 20px; border-top: 1px solid #34495e; margin-top: auto; }
+        .user-info { position: relative; cursor: pointer; }
+        .user-info .dropdown { display: none; position: absolute; bottom: 100%; left: 0; background: white; color: #333; border-radius: 8px; min-width: 150px; }
+        .user-info:hover .dropdown { display: block; }
+        .user-info .dropdown a { display: block; padding: 10px 15px; color: #333; text-decoration: none; cursor: pointer; }
+        .content { flex: 1; padding: 20px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-primary { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-danger { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-warning { background: #FF9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        .btn-edit { background: #2196F3; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        .table-container { background: white; border-radius: 12px; overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+        .close { float: right; font-size: 28px; cursor: pointer; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card.full-width { grid-column: span 2; }
+        .pet-card, .booking-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .booking-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .status-active { background: #4CAF50; color: white; }
+        .status-confirmed { background: #2196F3; color: white; }
+        .status-pending { background: #FF9800; color: white; }
+        .status-completed { background: #9E9E9E; color: white; }
+        .profile-field { margin-bottom: 15px; display: flex; align-items: center; }
+        .profile-field label { width: 100px; font-weight: 500; }
+        .profile-field input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; }
+        .profile-field .readonly { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">🐾 PetHotel</div>
+            <ul class="nav-menu">
+                <li class="active"><a data-page="home">🏠 Главная</a></li>
+                <li><a data-page="pets">🐾 Питомцы</a></li>
+                <li><a data-page="booking">📅 Бронь</a></li>
+                <li><a data-page="profile">👤 Профиль</a></li>
+            </ul>
+            <div class="user-menu">
+                <div class="user-info">
+                    <span>👤 Клиент ▼</span>
+                    <div class="dropdown"><a id="logout">🚪 Выход</a></div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="content">
+            <!-- Главная страница -->
+            <div id="page-home" class="page active">
+                <h1>ДОБРО ПОЖАЛОВАТЬ, <span id="clientName">Клиент</span>!</h1>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h2>🐾 Мои питомцы</h2>
+                        <div id="myPets"></div>
+                        <button class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="navigateToPage('pets')">Управление питомцами</button>
+                    </div>
+                    <div class="card">
+                        <h2>📅 Активные бронирования</h2>
+                        <div id="activeBookingsList"></div>
+                        <button class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="navigateToPage('booking')">Новое бронирование</button>
+                    </div>
+                    <div class="card full-width">
+                        <h2>📋 История бронирований</h2>
+                        <div id="bookingHistory"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Питомцы -->
+            <div id="page-pets" class="page">
+                <div class="page-header">
+                    <h1>🐾 Мои питомцы</h1>
+                    <button class="btn-primary" onclick="showAddPetModal()">+ Добавить питомца</button>
+                </div>
+                <div class="table-container">
+                    <table id="petsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Кличка</th>
+                                <th>Вид</th>
+                                <th>Порода</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Бронирование -->
+            <div id="page-booking" class="page">
+                <div class="page-header">
+                    <h1>📅 Новое бронирование</h1>
+                </div>
+                <div class="card" style="max-width: 500px;">
+                    <form id="bookingForm">
+                        <div class="form-group">
+                            <label>Питомец</label>
+                            <select id="petSelect" required>
+                                <option value="">Выберите питомца</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Дата заезда</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Дата выезда</label>
+                            <input type="date" id="endDate" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Забронировать</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Профиль (редактируемый) -->
+            <div id="page-profile" class="page">
+                <div class="page-header">
+                    <h1>👤 Мой профиль</h1>
+                    <button class="btn-edit" id="editProfileBtn">✏️ Редактировать</button>
+                </div>
+                <div class="card" style="max-width: 500px;">
+                    <form id="profileForm">
+                        <div class="profile-field">
+                            <label>Фамилия:</label>
+                            <input type="text" id="profileLastName" class="readonly" readonly>
+                        </div>
+                        <div class="profile-field">
+                            <label>Имя:</label>
+                            <input type="text" id="profileFirstName" class="readonly" readonly>
+                        </div>
+                        <div class="profile-field">
+                            <label>Телефон:</label>
+                            <input type="text" id="profilePhone" class="readonly" readonly>
+                        </div>
+                        <div class="profile-field">
+                            <label>Email:</label>
+                            <input type="email" id="profileEmail" class="readonly" readonly>
+                        </div>
+                        <div id="profileButtons" style="display: none; margin-top: 20px;">
+                            <button type="submit" class="btn-primary">💾 Сохранить</button>
+                            <button type="button" class="btn-danger" id="cancelEditBtn">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно добавления питомца -->
+    <div id="petModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePetModal()">&times;</span>
+            <h2>➕ Добавить питомца</h2>
+            <form id="petForm">
+                <div class="form-group">
+                    <label>Кличка</label>
+                    <input type="text" id="petName" required>
+                </div>
+                <div class="form-group">
+                    <label>Вид</label>
+                    <select id="petSpecies" required>
+                        <option value="">Выберите вид</option>
+                        <option value="Собака">Собака</option>
+                        <option value="Кошка">Кошка</option>
+                        <option value="Хомяк">Хомяк</option>
+                        <option value="Шиншилла">Шиншилла</option>
+                        <option value="Морская свинка">Морская свинка</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Порода</label>
+                    <input type="text" id="petBreed" placeholder="например, Немецкая овчарка">
+                </div>
+                <button type="submit" class="btn-primary">💾 Сохранить питомца</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/v1';
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        const userId = localStorage.getItem('user_id');
+
+        if (!token || role !== 'client') window.location.href = 'login.html';
+
+        // ========== LOCALSTORAGE ==========
+       const STORAGE_KEYS = {
+    CLIENTS: 'pet_hotel_client_clients',
+    ANIMALS: 'pet_hotel_client_animals',
+    BOOKINGS: 'pet_hotel_client_bookings'
+};
+        // Начальные данные - ПУСТЫЕ
+        const defaultClients = [
+            { client_id: 1, last_name: '', first_name: '', phone: '', email: '', animal_count: 0 }
+        ];
+
+        let clientsData = [], animalsData = [], bookingsData = [];
+        let currentClientId = 1;
+
+        function loadData() {
+            const savedClients = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+            const savedAnimals = localStorage.getItem(STORAGE_KEYS.ANIMALS);
+            const savedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
+            
+            clientsData = savedClients ? JSON.parse(savedClients) : JSON.parse(JSON.stringify(defaultClients));
+            animalsData = savedAnimals ? JSON.parse(savedAnimals) : [];
+            bookingsData = savedBookings ? JSON.parse(savedBookings) : [];
+            
+            // Если профиль пустой, запрашиваем данные при первом входе
+            if (!clientsData[0].last_name) {
+                const lastName = prompt('Добро пожаловать! Пожалуйста, введите вашу фамилию:');
+                if (lastName) clientsData[0].last_name = lastName;
+                const firstName = prompt('Введите ваше имя:');
+                if (firstName) clientsData[0].first_name = firstName;
+                const phone = prompt('Введите ваш телефон:');
+                if (phone) clientsData[0].phone = phone;
+                const email = prompt('Введите ваш email:');
+                if (email) clientsData[0].email = email;
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clientsData));
+            localStorage.setItem(STORAGE_KEYS.ANIMALS, JSON.stringify(animalsData));
+            localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookingsData));
+        }
+
+        function getNextAnimalId() { 
+            const maxId = animalsData.length ? Math.max(...animalsData.map(a => a.animal_id)) : 0; 
+            return maxId + 1; 
+        }
+        
+        function getNextBookingId() { 
+            const maxId = bookingsData.length ? Math.max(...bookingsData.map(b => b.booking_id)) : 0; 
+            return maxId + 1; 
+        }
+
+        function getCurrentClient() { 
+            return clientsData.find(c => c.client_id === currentClientId); 
+        }
+        
+        function getMyAnimals() { 
+            return animalsData.filter(a => a.client_id === currentClientId); 
+        }
+        
+        function getMyBookings() { 
+            return bookingsData.filter(b => b.client_id === currentClientId); 
+        }
+
+        // ========== НАВИГАЦИЯ ==========
+        function navigateToPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const targetPage = document.getElementById(`page-${page}`);
+            if (targetPage) targetPage.classList.add('active');
+            document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
+            const activeLink = document.querySelector(`.nav-menu li a[data-page="${page}"]`);
+            if (activeLink) activeLink.parentElement.classList.add('active');
+            if (page === 'pets') loadPets();
+            if (page === 'booking') loadPetSelect();
+            if (page === 'home') loadHome();
+            if (page === 'profile') loadProfile();
+        }
+
+        document.querySelectorAll('.nav-menu li a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateToPage(link.getAttribute('data-page'));
+            });
+        });
+
+        // ========== ГЛАВНАЯ СТРАНИЦА ==========
+        function loadHome() {
+            const client = getCurrentClient();
+            if (client) document.getElementById('clientName').innerText = `${client.first_name} ${client.last_name}`;
+            
+            const myPets = getMyAnimals();
+            const petsHtml = myPets.map(p => `<div class="pet-card">🐕 ${p.name} (${p.species})</div>`).join('');
+            document.getElementById('myPets').innerHTML = petsHtml || '<div class="pet-card">У вас пока нет питомцев</div>';
+            
+            const myBookings = getMyBookings();
+            const today = new Date().toISOString().split('T')[0];
+            const activeBookings = myBookings.filter(b => (b.status === 'active' || b.status === 'confirmed') && b.end_date >= today);
+            
+            const activeHtml = activeBookings.map(b => {
+                const animal = animalsData.find(a => a.animal_id === b.animal_id);
+                let statusText = b.status === 'active' ? 'Активно' : 'Подтверждено';
+                let statusClass = b.status === 'active' ? 'status-active' : 'status-confirmed';
+                return `
+                    <div class="booking-item">
+                        <div><strong>${animal ? animal.name : '-'}</strong> | 📅 ${b.start_date} — ${b.end_date} | <span class="booking-status ${statusClass}">${statusText}</span></div>
+                        <button class="btn-danger" onclick="cancelBooking(${b.booking_id})">Отменить</button>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('activeBookingsList').innerHTML = activeHtml || '<div class="booking-item">Нет активных бронирований</div>';
+            
+            const historyBookings = myBookings.filter(b => b.status === 'completed' || (b.status === 'confirmed' && b.end_date < today));
+            const historyHtml = historyBookings.map(b => {
+                const animal = animalsData.find(a => a.animal_id === b.animal_id);
+                return `<div class="booking-item">🐕 ${animal ? animal.name : '-'} | 📅 ${b.start_date} — ${b.end_date} | <span class="booking-status status-completed">Завершено</span></div>`;
+            }).join('');
+            document.getElementById('bookingHistory').innerHTML = historyHtml || '<div class="booking-item">История пуста</div>';
+        }
+
+        window.cancelBooking = function(id) {
+            if (confirm('Отменить бронирование?')) {
+                const index = bookingsData.findIndex(b => b.booking_id === id);
+                if (index !== -1) {
+                    bookingsData[index].status = 'cancelled';
+                    saveData();
+                    loadHome();
+                    alert('✅ Бронирование отменено');
+                }
+            }
+        };
+
+        // ========== ПИТОМЦЫ ==========
+        function loadPets() {
+            const tbody = document.querySelector('#petsTable tbody');
+            if (!tbody) return;
+            const myPets = getMyAnimals();
+            
+            if (myPets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">У вас пока нет питомцев. Нажмите "+ Добавить питомца"</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = myPets.map(p => `
+                <tr>
+                    <td>${p.animal_id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.species}</td>
+                    <td>${p.breed || '-'}</td>
+                    <td><button class="btn-danger" onclick="deletePet(${p.animal_id})">🗑️ Удалить</button></td>
+                </tr>
+            `).join('');
+        }
+
+        window.deletePet = function(id) {
+            if (confirm('Удалить питомца?')) {
+                animalsData = animalsData.filter(a => a.animal_id !== id);
+                bookingsData = bookingsData.filter(b => b.animal_id !== id);
+                loadPets();
+                loadHome();
+                saveData();
+                alert('✅ Питомец удалён');
+            }
+        };
+
+        function showAddPetModal() { 
+            document.getElementById('petModal').style.display = 'block'; 
+        }
+        
+        function closePetModal() { 
+            document.getElementById('petModal').style.display = 'none'; 
+            document.getElementById('petForm').reset(); 
+        }
+
+        document.getElementById('petForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            let breed = document.getElementById('petBreed').value;
+            if (breed) breed = breed.charAt(0).toUpperCase() + breed.slice(1);
+            
+            const newAnimal = {
+                animal_id: getNextAnimalId(),
+                client_id: currentClientId,
+                name: document.getElementById('petName').value,
+                species: document.getElementById('petSpecies').value,
+                breed: breed
+            };
+            
+            animalsData.push(newAnimal);
+            closePetModal();
+            loadPets();
+            loadHome();
+            loadPetSelect();
+            saveData();
+            alert('✅ Питомец добавлен!');
+        });
+
+        // ========== БРОНИРОВАНИЕ ==========
+        function loadPetSelect() {
+            const select = document.getElementById('petSelect');
+            if (!select) return;
+            const myPets = getMyAnimals();
+            select.innerHTML = '<option value="">Выберите питомца</option>' + myPets.map(p => `<option value="${p.animal_id}">${p.name} (${p.species})</option>`).join('');
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const animalId = parseInt(document.getElementById('petSelect').value);
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!animalId || !startDate || !endDate) {
+                alert('Заполните все поля');
+                return;
+            }
+            
+            const newBooking = {
+                booking_id: getNextBookingId(),
+                client_id: currentClientId,
+                animal_id: animalId,
+                start_date: startDate,
+                end_date: endDate,
+                status: 'confirmed'
+            };
+            
+            bookingsData.push(newBooking);
+            saveData();
+            alert('✅ Бронирование создано!');
+            document.getElementById('bookingForm').reset();
+            loadHome();
+            navigateToPage('home');
+        });
+
+        // ========== ПРОФИЛЬ ==========
+        function loadProfile() {
+            const client = getCurrentClient();
+            if (client) {
+                document.getElementById('profileLastName').value = client.last_name || '';
+                document.getElementById('profileFirstName').value = client.first_name || '';
+                document.getElementById('profilePhone').value = client.phone || '';
+                document.getElementById('profileEmail').value = client.email || '';
+            }
+        }
+
+        let isEditMode = false;
+        
+        document.getElementById('editProfileBtn').addEventListener('click', () => {
+            isEditMode = true;
+            document.getElementById('profileLastName').readOnly = false;
+            document.getElementById('profileFirstName').readOnly = false;
+            document.getElementById('profilePhone').readOnly = false;
+            document.getElementById('profileEmail').readOnly = false;
+            document.getElementById('profileLastName').classList.remove('readonly');
+            document.getElementById('profileFirstName').classList.remove('readonly');
+            document.getElementById('profilePhone').classList.remove('readonly');
+            document.getElementById('profileEmail').classList.remove('readonly');
+            document.getElementById('profileButtons').style.display = 'block';
+            document.getElementById('editProfileBtn').style.display = 'none';
+        });
+        
+        document.getElementById('cancelEditBtn').addEventListener('click', () => {
+            isEditMode = false;
+            document.getElementById('profileLastName').readOnly = true;
+            document.getElementById('profileFirstName').readOnly = true;
+            document.getElementById('profilePhone').readOnly = true;
+            document.getElementById('profileEmail').readOnly = true;
+            document.getElementById('profileLastName').classList.add('readonly');
+            document.getElementById('profileFirstName').classList.add('readonly');
+            document.getElementById('profilePhone').classList.add('readonly');
+            document.getElementById('profileEmail').classList.add('readonly');
+            document.getElementById('profileButtons').style.display = 'none';
+            document.getElementById('editProfileBtn').style.display = 'block';
+            loadProfile();
+        });
+        
+        document.getElementById('profileForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            clientsData[0] = {
+                ...clientsData[0],
+                last_name: document.getElementById('profileLastName').value,
+                first_name: document.getElementById('profileFirstName').value,
+                phone: document.getElementById('profilePhone').value,
+                email: document.getElementById('profileEmail').value
+            };
+            saveData();
+            loadProfile();
+            loadHome();
+            
+            isEditMode = false;
+            document.getElementById('profileLastName').readOnly = true;
+            document.getElementById('profileFirstName').readOnly = true;
+            document.getElementById('profilePhone').readOnly = true;
+            document.getElementById('profileEmail').readOnly = true;
+            document.getElementById('profileButtons').style.display = 'none';
+            document.getElementById('editProfileBtn').style.display = 'block';
+            
+            alert('✅ Профиль обновлён!');
+        });
+
+        // ========== ВЫХОД ==========
+        document.getElementById('logout').addEventListener('click', (e) => {
+            e.preventDefault();
+            saveData();
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('user_id');
+            window.location.href = 'login.html';
+        });
+
+        // ========== ЗАКРЫТИЕ МОДАЛЬНОГО ОКНА ПО КЛИКУ ВНЕ ==========
+        window.onclick = function(event) {
+            const modal = document.getElementById('petModal');
+            if (event.target == modal) closePetModal();
+        }
+
+        // ========== ЗАГРУЗКА ==========
+        loadData();
+        loadHome();
+        loadPets();
+        loadPetSelect();
+
+        window.addEventListener('beforeunload', () => saveData());
+    </script>
+</body>
+</html>
